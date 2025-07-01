@@ -1,4 +1,28 @@
-### --- FULL WORKING SCRIPT (FINAL VERSION) --- ###
+################################################################################
+#
+# Bayesian Spatial Analysis of Unemployment in Bangladesh
+#
+# Author:       Diego Perez Ruiz
+# Date:         1st of July, 2025
+# Institution:  The University of Manchester, Department of Statistics
+#
+#-------------------------------------------------------------------------------
+#
+# Description:
+# This script performs a Bayesian spatial analysis of unemployment rates across
+# the districts of Bangladesh using the 2013 Labour Force Survey (LFS) data.
+# It implements a Besag-York-Mollié 2 (BYM2) model using R-INLA to account for
+# spatial autocorrelation and estimate the effect of urbanization on unemployment.
+#
+# The script covers the full workflow:
+# 1. Data Loading and Pre-processing
+# 2. Aggregation of survey microdata to the district level
+# 3. Creation of a spatial adjacency matrix
+# 4. Definition and execution of the BYM2 model
+# 5. Visualization of raw data, smoothed model estimates, and spatial effects.
+#
+################################################################################
+
 
 ### STEP 0: SETUP - INSTALL AND LOAD PACKAGES ###
 required_packages <- c("tidyverse", "sf", "spdep", "haven", "geodata", "viridis")
@@ -15,7 +39,7 @@ library(INLA)
 library(spdep)
 
 ### STEP 1: LOAD SURVEY DATA ###
-file_path <- "Desktop/Data Science Models/Bangladesh/Bangladesh_LF_and_CL_Survey_2013/Dataset/LFS-2013-By Quarter.dta"
+file_path <- "/Users/user/Desktop/Data Science Models/Bangladesh -Data/Bangladesh_LF_and_CL_Survey_2013/Dataset/LFS-2013-By Quarter.dta"
 lfs_data_factored <- read_dta(file_path) %>% as_factor()
 
 ### STEP 2: AGGREGATE DATA (WITH CORRECT CASE AND NAME CLEANING) ###
@@ -112,4 +136,3 @@ map3 <- ggplot(model_sf) +
 print(map1)
 print(map2)
 print(map3)
-
