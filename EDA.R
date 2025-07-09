@@ -52,31 +52,6 @@ lfs_data = lfs_data %>%
     .default = 1
   ))
 
-### Rename class as educhigh
-### Rename q48 as labourstatustype. 
-### Rename lf as isinlforce
-### Rename nul1 as availtowork
-
-
-###Select the key groups for analysis
-###      KEEP GROUP 1
-###Employed and otherwise Labour-Force active people
-### %>% lf==1
-       ### ADD GROUP 2 the unemployed: 
-##  add group those cases where nul1==1
-### Note:  nul1 is an unemployment variable, type #1. 
-### Then add a factor level to q48, for the combined list of cases, mutate
-###  so that a factor level 10 unemployed is added to it. 
-### This gives levels 1 to 10 plus 99, ie 11 levels. 
-### Now you can create a vector for all, unemployed.
-### unemployed = 0 casewhen q48 ==10 unemployed==1. 
-
-
-### Tabulate unemployed by isinlforce and check raw N matches the current number of raw N. 
-### If not, then alter isinlforce by mutate , casewhen unemployed==1, isinlforce==1. 
-
-### If this is not clear then discuss it with the team. 
-
 ###Exploratory Data Analysis----
 ### Aims 1) what % of women are in the Labour Force (LF), and men? 
 
@@ -162,6 +137,34 @@ uemp_counts = lfs_data %>%
 
 #found here
 uemp_tab
+
+#old comments from Wendy, to be removed later.
+
+### Rename class as educhigh
+### Rename q48 as labourstatustype. 
+### Rename lf as isinlforce
+### Rename nul1 as availtowork
+
+
+###Select the key groups for analysis
+###      KEEP GROUP 1
+###Employed and otherwise Labour-Force active people
+### %>% lf==1
+### ADD GROUP 2 the unemployed: 
+##  add group those cases where nul1==1
+### Note:  nul1 is an unemployment variable, type #1. 
+### Then add a factor level to q48, for the combined list of cases, mutate
+###  so that a factor level 10 unemployed is added to it. 
+### This gives levels 1 to 10 plus 99, ie 11 levels. 
+### Now you can create a vector for all, unemployed.
+### unemployed = 0 casewhen q48 ==10 unemployed==1. 
+
+
+### Tabulate unemployed by isinlforce and check raw N matches the current number of raw N. 
+### If not, then alter isinlforce by mutate , casewhen unemployed==1, isinlforce==1. 
+
+### If this is not clear then discuss it with the team. 
+
 
 ### STEP 2: AGGREGATE DATA (WITH CORRECT CASE AND NAME CLEANING) ----
 district_model_data <- lfs_data_factored %>%
