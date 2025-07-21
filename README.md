@@ -1,7 +1,5 @@
 # Bayesian Spatial Analysis of Unemployment in Bangladesh (2013)
 
-![Bangladesh Unemployment Map](link/to/your/smoothed_map.png)  <!-- You will replace this link with the URL of your map image -->
-
 ## Overview
 
 This repository contains the R code and analysis for a geospatial study of unemployment patterns across the districts of Bangladesh. Using the **2013 Bangladesh Labour Force and Child Labour Survey (LFS)** microdata, this project implements a **Bayesian hierarchical model (BYM2)** to:
