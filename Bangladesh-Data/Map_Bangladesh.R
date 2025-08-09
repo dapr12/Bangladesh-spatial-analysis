@@ -20,12 +20,16 @@ library(haven)     # To read Stata .dta files
 
 # --- Load your data ---
 # !!! IMPORTANT: Replace this with the correct path to your file !!!
-file_path <- "Desktop/Data Science Models/Bangladesh/Bangladesh_LF_and_CL_Survey_2013/Dataset/LFS-2013-By Quarter.dta"
+file_path <- "./Bangladesh-Data/Bangladesh_LF_and_CL_Survey_2013/Dataset/LFS-2013-By Quarter.dta"
 lfs_data <- read_dta(file_path)
 
-# Convert coded numeric variables (like division codes) into their text labels
-# This turns the numeric code for 'div' (e.g., 10) into its name (e.g., "Barisal")
-lfs_data_factored <- as_factor(lfs_data)
+#read in the cleaned dataset, produced by the Lf_tut.qmd script
+lfs_data_factored <- readr::read_csv("./Bangladesh-Data/Bangladesh_LF_and_CL_Survey_2013/Dataset/cleaned_lfdata.csv")
+
+
+# # Convert coded numeric variables (like division codes) into their text labels
+# # This turns the numeric code for 'div' (e.g., 10) into its name (e.g., "Barisal")
+# lfs_data_factored <- as_factor(lfs_data)
 
 
 ### STEP 2: AGGREGATE DATA TO THE DIVISION LEVEL ###
@@ -34,20 +38,22 @@ lfs_data_factored <- as_factor(lfs_data)
 # We use the 'wgt_final' variable to ensure the sample is representative.
 # The variable 'unemp15' is used for unemployment status (for people 15+).
 
+
 division_summary <- lfs_data_factored %>%
-  # Filter for valid data points
-  filter(!is.na(unemp15) & !is.na(wgt_final)) %>%
-  
-  # Group the data by division
-  group_by(div) %>%
-  
+  # Group the data by zilla (districts)
+  group_by(zl) %>%
   # Calculate the weighted unemployment rate and convert it to a percentage
   summarise(
-    unemployment_rate = weighted.mean(as.numeric(unemp15), w = wgt_final, na.rm = TRUE) * 100
+    unemployment_rate = weighted.mean(as.numeric(unemployed), w = wgt_final, na.rm = TRUE)
   ) %>%
   
-  # Rename the 'div' column to 'NAME_1' to match the map data's column name
-  rename(NAME_1 = div)
+  # Rename the 'div' column to 'NAME_2' to match the map data's column name
+  rename(NAME_2 = zl)
+
+#Rename zl by removing number and capitalising to match output of gadm
+division_summary$NAME_2 <- division_summary$NAME_2 %>%
+  str_replace("^[0-9]+\\.\\s*", "") %>%  # remove leading number, dot, and spaces
+  str_to_title()                         # capitalise first letter of each word
 
 # Print the resulting summary table to check it
 print("Aggregated Unemployment Rate by Division:")
@@ -59,11 +65,25 @@ print(division_summary)
 # Download Bangladesh administrative boundaries (level 1 = Divisions)
 # The data will be cached, so it's fast on subsequent runs.
 # 'sf' objects are the standard for spatial data in the tidyverse.
-bd_map_sf <- gadm(country = "BGD", level = 1, path = tempdir()) %>%
+bd_map_sf <- gadm(country = "BGD", level = 2, path = tempdir()) %>%
   st_as_sf()
 
 # Check the column names of the map data to confirm 'NAME_1' is the division name
-# names(bd_map_sf)
+check = sort(division_summary$NAME_2) == sort(bd_map_sf$NAME_2)
+change = which(check == F)
+
+#spelling mistake in bd_map_sf. Should be "Brahmanbaria".
+bd_map_sf$NAME_2[which(bd_map_sf$NAME_2 == "Brahamanbaria")] <- "Brahmanbaria"
+#spelling mistake in division_summary. Should be Kishoreganj.
+division_summary$NAME_2[which(division_summary$NAME_2 == "Kishorgonj")] <- "Kishoreganj"
+#variant spelling of Cox's Bazar. It's capitalised in bd_map
+bd_map_sf$NAME_2[which(bd_map_sf$NAME_2 == "Cox'S Bazar")] <- "Cox's Bazar"
+
+# sort(division_summary$NAME_2)[12]
+# sort(bd_map_sf$NAME_2)[12]
+
+#check all names match up now
+all(sort(division_summary$NAME_2) == sort(bd_map_sf$NAME_2))
 
 
 ### STEP 4: JOIN YOUR DATA WITH THE MAP ###
@@ -71,7 +91,7 @@ bd_map_sf <- gadm(country = "BGD", level = 1, path = tempdir()) %>%
 # Merge the calculated unemployment rates with the map polygons
 # using the division name ('NAME_1') as the common key.
 map_data_final <- bd_map_sf %>%
-  left_join(division_summary, by = "NAME_1")
+  left_join(division_summary, by = "NAME_2")
 
 
 ### STEP 5: CREATE AND DISPLAY THE VISUALIZATION MAP ###
@@ -82,7 +102,7 @@ final_map <- ggplot(data = map_data_final) +
   geom_sf(aes(fill = unemployment_rate)) +
   
   # Add labels to the divisions for better readability
-  geom_sf_text(aes(label = NAME_1), size = 2.5, color = "black", fontface = "bold") +
+  geom_sf_text(aes(label = NAME_2), size = 2.5, color = "black", fontface = "bold") +
   
   # Use a color-blind friendly and visually appealing color scale
   scale_fill_viridis_c(option = "magma", direction = -1, na.value = "grey80") +

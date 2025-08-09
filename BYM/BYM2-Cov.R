@@ -1,12 +1,12 @@
 # 1. Load Required Packages
-pkgs <- c("sf", "spdep", "INLA", "rstan", "SpatialEpi")
+pkgs <- c("sf", "spdep", "INLA", "rstan", "SpatialEpi", "geostan")
 lapply(pkgs, require, character.only = TRUE)
 
 # Configure rstan
 rstan_options(javascript = FALSE, auto_write = TRUE)
 
 # 2. Source Helper Functions
-source("icar-functions.R") # Contains prep_icar_data and scale_c
+source("./BYM/icar-functions.R") # Contains prep_icar_data and scale_c
 
 # 3. Load Data
 data(scotland)
@@ -101,7 +101,7 @@ stan_data_list <- list(
 str(stan_data_list)
 
 # 9. Compile the Stan Model
-stan_model_file <- "BYM2_model_covariates.stan" # Use the new file name
+stan_model_file <- "./BYM/BYM2_model_covariates.stan" # Use the new file name
 if (!file.exists(stan_model_file)) {
   stop("Stan model file not found: ", stan_model_file)
 }

@@ -1,0 +1,190 @@
+---
+title: "LFS_Tutorial"
+author: "Anthony Kwong"
+date: "2025-07-25"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Welcome to our tutorial for analysing the Bangladesh labour force dataset. 
+
+First we load our packages using pacman. 
+
+```{r}
+pacman::p_load("tidyverse", "sf", "spdep", "haven", "geodata", "viridis", "INLA")
+```
+
+# Step 1: Data Wrangling
+
+```{r}
+#load survey data ----
+lfs_data = haven::read_dta("../Bangladesh-Data/Bangladesh_LF_and_CL_Survey_2013/Dataset/LFS-2013-By Quarter.dta") %>% as_factor()
+
+#Change age to numeric
+lfs_data$age <- as.numeric(lfs_data$age)
+#set female=1, male=0
+lfs_data$sex_binary <- plyr::revalue(lfs_data$sex,c("1. male" = 0, "2. female" = 1))
+#add household head variable. 1 if household head, 0 otherwise
+unique(lfs_data$rel)
+lfs_data = lfs_data%>%
+  dplyr::mutate(house_head = ifelse(rel == "1. household head", 1, 0))
+
+#add unemployed variable. based on nul1.
+lfs_data = lfs_data %>%
+  mutate(unemployed = case_when(
+    nul1 == 1 ~ 1,
+    .default = 0
+  ))
+
+#filter lf = 1, rename to lf_data since we filtered out students, retired etc
+
+#check the levels of q48
+levels(lfs_data$q48)
+#add unemployed to q48 as a factor
+levels(lfs_data$q48) <- c(levels(lfs_data$q48), "unemployed")
+#set unemployed rows for q48
+lfs_data$q48[lfs_data$unemployed == 1] <- "unemployed"
+#check 
+all(which(lfs_data$q48 == "unemployed") == which(lfs_data$unemployed == 1))
+
+#rename variables to be more understandable
+lfs_data = lfs_data %>%
+  dplyr::rename(
+    #Rename class as edu_high
+    edu_high = class,
+    #Rename q48 to labour_status
+    labour_status_type = q48,
+    avail_to_work = nul1
+  )
+```
+Create a table for labourforce and unemployment
+
+```{r}
+lfs_data %>%
+  count(lf, unemployed)
+```
+
+Let's look at the age distribution on the entire dataset.
+
+```{r}
+hist(lfs_data$age)
+```
+
+We create a new dataset called lf_data which removes students and retirees. 
+
+```{r}
+lf_data = lfs_data %>% 
+  dplyr::filter(age > 14) %>%
+  dplyr::filter(age < 45)
+```
+
+Check
+
+```{r}
+hist(lf_data$age)
+```
+
+#Exploratory Data Analysis
+
+What % of women/men are in the Labour Force (LF)?
+
+```{r}
+lf_data %>%
+  group_by(sex) %>%
+  summarise(
+    n_in_lf = sum(lf == 1, na.rm = TRUE),
+    n_total = n(),
+    pct_in_lf = 100 * n_in_lf / n_total
+  )
+```
+What is the FemHhouseholdHead prevalence by UpaZilla (districts) upz?
+
+```{r}
+#add fem_hh_head variable
+lf_data = lf_data %>%
+  dplyr::mutate(fem_hh_head = case_when(
+    sex_binary == 1 & house_head == 1 ~ 1,
+    .default = 0
+  ))
+```
+
+```{r}
+lf_data %>%
+  group_by(upz_name) %>%
+  summarise(
+    total = n(),
+    num_fhead = sum(fem_hh_head == 1),
+    pct_fhead = num_fhead/total
+  )
+```
+```{r}
+# Create 5-year age cohorts
+lf_data$age_cohort <- cut(
+  lf_data$age,
+  breaks = seq(15, 45, by = 5),  # 15, 20, 25, ..., 45
+  right = FALSE,                # intervals: [15,20), [20,25), ...
+  labels = c("15-19", "20-24", "25-29", "30-34", "35-39", "40-44")
+)
+
+zilla_counts = lf_data %>%
+  group_by(sex, zl, age_cohort) %>%
+  summarise(
+    count = n()
+  )
+zilla_counts
+```
+
+What's the fewest Unemployed sample members in a sex in an age-group in a Zilla? 
+
+```{r}
+#We create a new table, counting the unemployment figures for every sex/age category. 
+
+uemp_tab = lf_data %>%
+  dplyr::group_by(age_cohort, sex, zl) %>%
+  summarise(
+    zilla_count = n(),
+    unemp = sum(unemployed == 1),
+    uemp_rate = unemp/zilla_count,
+    .groups = "drop"
+  )
+
+uemp_tab %>% 
+  arrange(zilla_count)
+```
+What's the weighted unemployment rate in each upazilla, grouped by sex? The weights are found in wgt_final. 
+
+```{r}
+weighted_urate <- lf_data %>%
+  group_by(sex, zl) %>%
+  summarise(
+    total_weight = sum(wgt_final, na.rm = TRUE),
+    unemployed_weight = sum(wgt_final * unemployed, na.rm = TRUE),
+    weighted_unemployment_rate = unemployed_weight / total_weight,
+    .groups = "drop"
+  )
+
+weighted_urate %>%
+  arrange(weighted_unemployment_rate)
+```
+
+What's the weighted employment rate in each upazilla, grouped by sex/age? 
+
+```{r}
+weighted_urate2 <- lf_data %>%
+  group_by(age_cohort,sex, zl) %>%
+  summarise(
+    total_weight = sum(wgt_final, na.rm = TRUE),
+    unemployed_weight = sum(wgt_final * unemployed, na.rm = TRUE),
+    weighted_unemployment_rate = unemployed_weight / total_weight,
+    .groups = "drop"
+  )
+
+weighted_urate %>%
+  arrange(weighted_unemployment_rate)
+```
+
+
+

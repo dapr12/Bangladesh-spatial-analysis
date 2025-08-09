@@ -25,11 +25,14 @@ lfs_data = lfs_data %>%
     nul1 == 1 ~ 1,
     .default = 0
   ))
+#filter lf = 1, rename to lf_data since we filtered out students, retired etc
+levels(lfs_data$q48)
 #add unemployed to q48 as a factor
 levels(lfs_data$q48) <- c(levels(lfs_data$q48), "unemployed")
 lfs_data$q48[lfs_data$unemployed == 1] <- "unemployed"
 #check 
 all(which(lfs_data$q48 == "unemployed") == which(lfs_data$unemployed == 1))
+
 #rename variables to be more understandable
 lfs_data = lfs_data %>%
   dplyr::rename(
@@ -45,12 +48,16 @@ lfs_data = lfs_data %>%
 lfs_data %>%
   count(in_labforce, unemployed)
 
-#change in_labforce to 0 if they are unemployed, otherwise it is 1 (Wendy to check)
-lfs_data = lfs_data %>%
-  dplyr::mutate(in_labforce = case_when(
-    unemployed == 1 ~ 0, 
-    .default = 1
-  ))
+#filter down rows to labourforce
+hist(lfs_data$age)
+#age filter
+lfs_data = lfs_data %>% 
+  dplyr::filter(age > 14) %>%
+  dplyr::filter(age < 45)
+
+
+all(is.na(lfs_data$wgt_final))
+
 
 ###Exploratory Data Analysis----
 ### Aims 1) what % of women are in the Labour Force (LF), and men? 
