@@ -8,16 +8,18 @@ rstan_options(javascript = FALSE, auto_write = TRUE)
 # 2. Source Helper Functions
 source("./BYM/icar-functions.R") # Contains prep_icar_data and scale_c
 
-# 3. Load Data
+# 3. Load Data----
 data(scotland)
 df <- scotland$data
 sp <- scotland$spatial.polygon
+#convert to sf type dataframe
 sp_sf <- st_as_sf(sp)
+#add covariates
 sp_sf$cases <- df$cases
 sp_sf$expected <- df$expected
 sp_sf$AFF <- df$AFF # Agriculture, Forestry, Fishing covariate
 
-# 4. Prepare Spatial Structure
+# 4. Prepare Spatial Structure----
 nb <- spdep::poly2nb(sp, queen = TRUE)
 C <- spdep::nb2mat(nb, style = "B", zero.policy = TRUE)
 n <- nrow(df)
@@ -26,7 +28,7 @@ stopifnot(nrow(C) == n)
 # 5. Prepare Data for Stan ICAR Functions
 icar_data <- prep_icar_data(C)
 
-# 6. Calculate Component-Specific Scaling Factor
+# 6. Calculate Component-Specific Scaling Factor ----
 k <- icar_data$k
 scale_factor <- vector(mode = "numeric", length = k)
 if (!exists("scale_c")) stop("Error: 'scale_c' function not found.")

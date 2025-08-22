@@ -32,35 +32,13 @@ lfs_data_factored <- readr::read_csv("./Bangladesh-Data/Bangladesh_LF_and_CL_Sur
 # lfs_data_factored <- as_factor(lfs_data)
 
 
-### STEP 2: AGGREGATE DATA TO THE DIVISION LEVEL ###
+### STEP 2: AGGREGATE DATA TO THE DIVISION LEVEL ----
 
-# Calculate the weighted unemployment rate for each division.
-# We use the 'wgt_final' variable to ensure the sample is representative.
-# The variable 'unemp15' is used for unemployment status (for people 15+).
-
-
-division_summary <- lfs_data_factored %>%
-  # Group the data by zilla (districts)
-  group_by(zl) %>%
-  # Calculate the weighted unemployment rate and convert it to a percentage
-  summarise(
-    unemployment_rate = weighted.mean(as.numeric(unemployed), w = wgt_final, na.rm = TRUE)
-  ) %>%
-  
-  # Rename the 'div' column to 'NAME_2' to match the map data's column name
-  rename(NAME_2 = zl)
-
-#Rename zl by removing number and capitalising to match output of gadm
-division_summary$NAME_2 <- division_summary$NAME_2 %>%
-  str_replace("^[0-9]+\\.\\s*", "") %>%  # remove leading number, dot, and spaces
-  str_to_title()                         # capitalise first letter of each word
-
-# Print the resulting summary table to check it
-print("Aggregated Unemployment Rate by Division:")
-print(division_summary)
+#run preprocessing script, output data is called division_summary
+source("./Code/preprocessing.R")
 
 
-### STEP 3: GET THE BANGLADESH MAP DATA ###
+### STEP 3: GET THE BANGLADESH MAP DATA ----
 
 # Download Bangladesh administrative boundaries (level 1 = Divisions)
 # The data will be cached, so it's fast on subsequent runs.
@@ -86,15 +64,19 @@ bd_map_sf$NAME_2[which(bd_map_sf$NAME_2 == "Cox'S Bazar")] <- "Cox's Bazar"
 all(sort(division_summary$NAME_2) == sort(bd_map_sf$NAME_2))
 
 
-### STEP 4: JOIN YOUR DATA WITH THE MAP ###
+### STEP 4: JOIN YOUR DATA WITH THE MAP ---
 
 # Merge the calculated unemployment rates with the map polygons
 # using the division name ('NAME_1') as the common key.
 map_data_final <- bd_map_sf %>%
   left_join(division_summary, by = "NAME_2")
 
+#rename NAME_2 to upazilla
 
-### STEP 5: CREATE AND DISPLAY THE VISUALIZATION MAP ###
+map_data_final <- map_data_final %>%
+  dplyr::rename(upazilla = NAME_2)
+
+### STEP 5: CREATE AND DISPLAY THE VISUALIZATION MAP ----
 
 # Use ggplot2 and geom_sf to plot the final data
 final_map <- ggplot(data = map_data_final) +
@@ -102,7 +84,7 @@ final_map <- ggplot(data = map_data_final) +
   geom_sf(aes(fill = unemployment_rate)) +
   
   # Add labels to the divisions for better readability
-  geom_sf_text(aes(label = NAME_2), size = 2.5, color = "black", fontface = "bold") +
+  geom_sf_text(aes(label = upazilla), size = 2.5, color = "black", fontface = "bold") +
   
   # Use a color-blind friendly and visually appealing color scale
   scale_fill_viridis_c(option = "magma", direction = -1, na.value = "grey80") +
